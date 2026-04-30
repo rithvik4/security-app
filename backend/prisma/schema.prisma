@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  SECURITY
+  MEMBER
+}
+
+enum LogStatus {
+  ENTERED
+  EXITED
+  REJECTED
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String?        @unique
+  phone         String?        @unique
+  passwordHash  String
+  role          Role
+  flatId        Int?
+  flat          Flat?          @relation(fields: [flatId], references: [id])
+  memberProfile Member?
+  createdLogs   VisitorLog[]   @relation("EntriesCreated")
+  refreshTokens RefreshToken[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Flat {
+  id         Int          @id @default(autoincrement())
+  block      String
+  flatNumber String
+  users      User[]
+  members    Member[]
+  logs       VisitorLog[]
+  createdAt  DateTime     @default(now())
+
+  @@unique([block, flatNumber])
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  flatId    Int
+  isOwner   Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flat      Flat     @relation(fields: [flatId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Visitor {
+  id            Int          @id @default(autoincrement())
+  name          String
+  phone         String?
+  vehicleNumber String?
+  logs          VisitorLog[]
+  createdAt     DateTime     @default(now())
+}
+
+model VisitorLog {
+  id          Int       @id @default(autoincrement())
+  visitorId   Int
+  flatId      Int
+  enteredBy   Int
+  entryTime   DateTime  @default(now())
+  approvedAt  DateTime?
+  exitTime    DateTime?
+  peopleCount Int       @default(1)
+  purpose     String?
+  status      LogStatus @default(ENTERED)
+  visitor     Visitor   @relation(fields: [visitorId], references: [id])
+  flat        Flat      @relation(fields: [flatId], references: [id])
+  guard       User      @relation("EntriesCreated", fields: [enteredBy], references: [id])
+
+  @@index([flatId, entryTime])
+  @@index([status])
+}
+
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+}
