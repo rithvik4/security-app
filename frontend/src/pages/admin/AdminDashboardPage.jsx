@@ -80,6 +80,10 @@ function AdminDashboardPage() {
             ["Active Entries", summary?.activeEntries || 0],
             ["Members", summary?.memberCount || 0],
             ["Security Staff", summary?.securityCount || 0],
+            ["Delivery Backlog", summary?.deliveryBacklog || 0],
+            ["Open Complaints", summary?.openComplaints || 0],
+            ["Pending Invoices", summary?.pendingInvoices || 0],
+            ["Open Emergencies", summary?.openEmergencyAlerts || 0],
           ].map(([label, value]) => (
             <div key={label} className="panel">
               <p className="text-xs uppercase text-ink/60">{label}</p>

@@ -19,30 +19,121 @@ enum LogStatus {
   REJECTED
 }
 
+enum DeliveryStatus {
+  EXPECTED
+  ARRIVED
+  COLLECTED
+  CANCELLED
+}
+
+enum VehicleStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum AlertLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  BANK_TRANSFER
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum StaffCategory {
+  MAID
+  DRIVER
+  COOK
+  SECURITY_GUARD
+  PLUMBER
+  ELECTRICIAN
+  MILKMAN
+  NEWSPAPER
+  OTHER
+}
+
 model User {
-  id            Int            @id @default(autoincrement())
-  name          String
-  email         String?        @unique
-  phone         String?        @unique
-  passwordHash  String
-  role          Role
-  flatId        Int?
-  flat          Flat?          @relation(fields: [flatId], references: [id])
-  memberProfile Member?
-  createdLogs   VisitorLog[]   @relation("EntriesCreated")
-  refreshTokens RefreshToken[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                    Int                  @id @default(autoincrement())
+  name                  String
+  email                 String?              @unique
+  phone                 String?              @unique
+  passwordHash          String
+  role                  Role
+  flatId                Int?
+  flat                  Flat?                @relation(fields: [flatId], references: [id])
+  memberProfile         Member?
+  createdLogs           VisitorLog[]         @relation("EntriesCreated")
+  refreshTokens         RefreshToken[]
+  vehicles              Vehicle[]
+  createdDeliveries     Delivery[]           @relation("DeliveryCreatedBy")
+  receivedDeliveries    Delivery[]           @relation("DeliveryReceivedBy")
+  raisedAlerts          EmergencyAlert[]     @relation("AlertRaisedBy")
+  acknowledgedAlerts    EmergencyAlert[]     @relation("AlertAcknowledgedBy")
+  createdInvoices       MaintenanceInvoice[] @relation("InvoiceCreatedBy")
+  maintenancePayments   MaintenancePayment[] @relation("MaintenancePaidBy")
+  raisedComplaints      ComplaintTicket[]    @relation("ComplaintRaisedBy")
+  assignedComplaints    ComplaintTicket[]    @relation("ComplaintAssignedTo")
+  announcements         Announcement[]
+  auditLogs             AuditLog[]
+  frequentVisitorsAdded FrequentVisitor[]    @relation("FrequentVisitorAddedBy")
+  staffAttendanceMarked StaffAttendance[]    @relation("AttendanceMarkedBy")
+  visitorInvites        VisitorInvite[]      @relation("InviteCreatedBy")
+  amenityBookings       AmenityBooking[]     @relation("AmenityBookedBy")
+  pollsCreated          SocietyPoll[]        @relation("PollCreatedBy")
+  pollVotes             PollVote[]           @relation("PollVotedBy")
+  parkingAllocations    ParkingAllocation[]  @relation("ParkingMarkedBy")
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 }
 
 model Flat {
-  id         Int          @id @default(autoincrement())
-  block      String
-  flatNumber String
-  users      User[]
-  members    Member[]
-  logs       VisitorLog[]
-  createdAt  DateTime     @default(now())
+  id          Int                  @id @default(autoincrement())
+  block       String
+  flatNumber  String
+  users       User[]
+  members     Member[]
+  logs        VisitorLog[]
+  vehicles    Vehicle[]
+  deliveries  Delivery[]
+  alerts      EmergencyAlert[]
+  invoices           MaintenanceInvoice[]
+  complaints         ComplaintTicket[]
+  frequentVisitors   FrequentVisitor[]
+  visitorInvites     VisitorInvite[]
+  amenityBookings    AmenityBooking[]
+  parkingAllocations ParkingAllocation[]
+  createdAt          DateTime             @default(now())
 
   @@unique([block, flatNumber])
 }
@@ -94,3 +185,285 @@ model RefreshToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
 }
+
+model Vehicle {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  flatId      Int
+  plateNumber String        @unique
+  type        String
+  brand       String?
+  color       String?
+  status      VehicleStatus @default(ACTIVE)
+  owner       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flat        Flat          @relation(fields: [flatId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([flatId])
+  @@index([status])
+}
+
+model Delivery {
+  id            Int            @id @default(autoincrement())
+  flatId         Int
+  courierName    String
+  contactNumber  String?
+  packageType    String?
+  expectedAt     DateTime?
+  receivedAt     DateTime?
+  status         DeliveryStatus @default(EXPECTED)
+  createdById    Int
+  receivedById   Int?
+  flat           Flat           @relation(fields: [flatId], references: [id])
+  createdBy      User           @relation("DeliveryCreatedBy", fields: [createdById], references: [id])
+  receivedBy     User?          @relation("DeliveryReceivedBy", fields: [receivedById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([flatId, status])
+}
+
+model EmergencyAlert {
+  id               Int         @id @default(autoincrement())
+  raisedById       Int
+  flatId           Int?
+  level            AlertLevel
+  message          String
+  status           AlertStatus @default(OPEN)
+  acknowledgedById Int?
+  acknowledgedAt   DateTime?
+  resolvedAt       DateTime?
+  raisedBy         User        @relation("AlertRaisedBy", fields: [raisedById], references: [id])
+  acknowledgedBy   User?       @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  flat             Flat?       @relation(fields: [flatId], references: [id])
+  createdAt        DateTime    @default(now())
+
+  @@index([status, level])
+  @@index([flatId])
+}
+
+model MaintenanceInvoice {
+  id          Int                @id @default(autoincrement())
+  flatId       Int
+  amount       Float
+  dueDate      DateTime
+  month        Int
+  year         Int
+  status       InvoiceStatus     @default(PENDING)
+  notes        String?
+  createdById  Int
+  flat         Flat              @relation(fields: [flatId], references: [id])
+  createdBy    User              @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  payments     MaintenancePayment[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([flatId, status])
+  @@index([year, month])
+}
+
+model MaintenancePayment {
+  id         Int             @id @default(autoincrement())
+  invoiceId  Int
+  paidById   Int
+  amount     Float
+  method     PaymentMethod
+  reference  String?
+  paidAt     DateTime        @default(now())
+  invoice    MaintenanceInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paidBy     User            @relation("MaintenancePaidBy", fields: [paidById], references: [id])
+
+  @@index([invoiceId])
+}
+
+model ComplaintTicket {
+  id            Int             @id @default(autoincrement())
+  flatId         Int
+  raisedById     Int
+  assignedToId   Int?
+  category       String
+  subject        String
+  description    String
+  status         ComplaintStatus @default(OPEN)
+  resolvedAt     DateTime?
+  flat           Flat            @relation(fields: [flatId], references: [id])
+  raisedBy       User            @relation("ComplaintRaisedBy", fields: [raisedById], references: [id])
+  assignedTo     User?           @relation("ComplaintAssignedTo", fields: [assignedToId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([flatId, status])
+}
+
+model Announcement {
+  id            Int       @id @default(autoincrement())
+  authorId      Int
+  title         String
+  message       String
+  audienceRole  Role?
+  author        User      @relation(fields: [authorId], references: [id])
+  createdAt     DateTime  @default(now())
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  actorId    Int?
+  action     String
+  module     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([module, createdAt])
+  @@index([actorId])
+}
+
+// ─── Frequent Visitors / Domestic Staff ───────────────────────────────────────
+
+model FrequentVisitor {
+  id          Int               @id @default(autoincrement())
+  flatId      Int
+  addedById   Int
+  name        String
+  phone       String?
+  category    StaffCategory
+  isActive    Boolean           @default(true)
+  flat        Flat              @relation(fields: [flatId], references: [id])
+  addedBy     User              @relation("FrequentVisitorAddedBy", fields: [addedById], references: [id])
+  attendances StaffAttendance[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([flatId])
+}
+
+model StaffAttendance {
+  id                Int             @id @default(autoincrement())
+  frequentVisitorId Int
+  markedById        Int
+  checkedInAt       DateTime        @default(now())
+  checkedOutAt      DateTime?
+  frequentVisitor   FrequentVisitor @relation(fields: [frequentVisitorId], references: [id])
+  markedBy          User            @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+
+  @@index([frequentVisitorId])
+}
+
+// ─── Visitor OTP Invites ──────────────────────────────────────────────────────
+
+model VisitorInvite {
+  id         Int      @id @default(autoincrement())
+  flatId     Int
+  createdById Int
+  guestName  String
+  guestPhone String?
+  purpose    String?
+  otp        String
+  validFrom  DateTime
+  validUntil DateTime
+  usedAt     DateTime?
+  flat       Flat     @relation(fields: [flatId], references: [id])
+  createdBy  User     @relation("InviteCreatedBy", fields: [createdById], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([flatId])
+  @@index([otp])
+}
+
+// ─── Amenity Booking ──────────────────────────────────────────────────────────
+
+model Amenity {
+  id          Int              @id @default(autoincrement())
+  name        String
+  description String?
+  capacity    Int              @default(1)
+  isActive    Boolean          @default(true)
+  bookings    AmenityBooking[]
+  createdAt   DateTime         @default(now())
+}
+
+model AmenityBooking {
+  id        Int           @id @default(autoincrement())
+  amenityId Int
+  userId    Int
+  flatId    Int
+  date      DateTime
+  startTime String
+  endTime   String
+  status    BookingStatus @default(PENDING)
+  notes     String?
+  amenity   Amenity       @relation(fields: [amenityId], references: [id])
+  user      User          @relation("AmenityBookedBy", fields: [userId], references: [id])
+  flat      Flat          @relation(fields: [flatId], references: [id])
+  createdAt DateTime      @default(now())
+
+  @@index([amenityId, date])
+  @@index([userId])
+}
+
+// ─── Society Polls ────────────────────────────────────────────────────────────
+
+model SocietyPoll {
+  id          Int          @id @default(autoincrement())
+  createdById Int
+  question    String
+  description String?
+  closesAt    DateTime
+  isActive    Boolean      @default(true)
+  options     PollOption[]
+  createdBy   User         @relation("PollCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+}
+
+model PollOption {
+  id     Int         @id @default(autoincrement())
+  pollId Int
+  text   String
+  poll   SocietyPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes  PollVote[]
+}
+
+model PollVote {
+  id        Int        @id @default(autoincrement())
+  pollId    Int
+  optionId  Int
+  userId    Int
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation("PollVotedBy", fields: [userId], references: [id])
+  createdAt DateTime   @default(now())
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+}
+
+// ─── Parking Management ───────────────────────────────────────────────────────
+
+model ParkingSlot {
+  id          Int                 @id @default(autoincrement())
+  slotNumber  String              @unique
+  type        String
+  block       String?
+  isActive    Boolean             @default(true)
+  allocations ParkingAllocation[]
+  createdAt   DateTime            @default(now())
+}
+
+model ParkingAllocation {
+  id          Int         @id @default(autoincrement())
+  slotId      Int
+  flatId      Int?
+  vehicleNo   String
+  purpose     String
+  markedById  Int
+  allocatedAt DateTime    @default(now())
+  releasedAt  DateTime?
+  slot        ParkingSlot @relation(fields: [slotId], references: [id])
+  flat        Flat?       @relation(fields: [flatId], references: [id])
+  markedBy    User        @relation("ParkingMarkedBy", fields: [markedById], references: [id])
+
+  @@index([slotId])
+}
+

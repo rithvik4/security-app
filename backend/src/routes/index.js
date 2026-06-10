@@ -1,5 +1,7 @@
 import { Router } from "express";
 
+import advancedRoutes from "./advanced.routes.js";
+import modulesRoutes from "./modules.routes.js";
 import adminRoutes from "./admin.routes.js";
 import authRoutes from "./auth.routes.js";
 import memberRoutes from "./member.routes.js";
@@ -15,5 +17,7 @@ router.use("/auth", authRoutes);
 router.use("/admin", adminRoutes);
 router.use("/security", securityRoutes);
 router.use("/member", memberRoutes);
+router.use("/advanced", advancedRoutes);
+router.use("/modules", modulesRoutes);
 
 export default router;

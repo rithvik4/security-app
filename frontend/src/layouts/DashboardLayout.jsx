@@ -7,9 +7,19 @@ const navByRole = {
     { to: "/admin", label: "Visitor Dashboard" },
     { to: "/admin/flats", label: "Flat Details" },
     { to: "/admin/guards", label: "Guard Details" },
+    { to: "/admin/operations", label: "Advanced Ops" },
+    { to: "/admin/modules", label: "Amenity · Polls · Parking" },
   ],
-  SECURITY: [{ to: "/security", label: "Gate Entry" }],
-  MEMBER: [{ to: "/member", label: "My Visitors" }],
+  SECURITY: [
+    { to: "/security", label: "Gate Entry" },
+    { to: "/security/operations", label: "Guard Dashboard" },
+    { to: "/security/modules", label: "Staff · OTP · Parking" },
+  ],
+  MEMBER: [
+    { to: "/member", label: "My Visitors" },
+    { to: "/member/community", label: "Community Hub" },
+    { to: "/member/services", label: "Services Hub" },
+  ],
 };
 
 function DashboardLayout() {

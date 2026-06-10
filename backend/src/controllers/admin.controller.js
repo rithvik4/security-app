@@ -12,12 +12,20 @@ export const getDashboardSummary = catchAsync(async (_req, res) => {
     activeEntries,
     memberCount,
     securityCount,
+    deliveryBacklog,
+    openComplaints,
+    pendingInvoices,
+    openEmergencyAlerts,
   ] = await Promise.all([
     prisma.visitor.count(),
     prisma.visitorLog.count(),
     prisma.visitorLog.count({ where: { status: "ENTERED" } }),
     prisma.user.count({ where: { role: Role.MEMBER } }),
     prisma.user.count({ where: { role: Role.SECURITY } }),
+    prisma.delivery.count({ where: { status: { in: ["EXPECTED", "ARRIVED"] } } }),
+    prisma.complaintTicket.count({ where: { status: { in: ["OPEN", "IN_PROGRESS"] } } }),
+    prisma.maintenanceInvoice.count({ where: { status: { in: ["PENDING", "PARTIALLY_PAID", "OVERDUE"] } } }),
+    prisma.emergencyAlert.count({ where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } } }),
   ]);
 
   res.json({
@@ -26,6 +34,10 @@ export const getDashboardSummary = catchAsync(async (_req, res) => {
     activeEntries,
     memberCount,
     securityCount,
+    deliveryBacklog,
+    openComplaints,
+    pendingInvoices,
+    openEmergencyAlerts,
   });
 });
 
