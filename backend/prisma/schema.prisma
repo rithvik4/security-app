@@ -83,6 +83,19 @@ enum StaffCategory {
   OTHER
 }
 
+enum WatchlistType {
+  VISITOR_PHONE
+  VEHICLE_NUMBER
+  PERSON_NAME
+}
+
+enum ReminderChannel {
+  PUSH
+  SMS
+  EMAIL
+  WHATSAPP
+}
+
 model User {
   id                    Int                  @id @default(autoincrement())
   name                  String
@@ -113,6 +126,10 @@ model User {
   pollsCreated          SocietyPoll[]        @relation("PollCreatedBy")
   pollVotes             PollVote[]           @relation("PollVotedBy")
   parkingAllocations    ParkingAllocation[]  @relation("ParkingMarkedBy")
+  watchlistEntries      WatchlistEntry[]     @relation("WatchlistCreatedBy")
+  paymentReminders      PaymentReminder[]    @relation("ReminderSentBy")
+  incidentTasksAssigned IncidentTask[]       @relation("IncidentAssignedTo")
+  incidentTasksCreated  IncidentTask[]       @relation("IncidentCreatedBy")
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 }
@@ -212,6 +229,8 @@ model Delivery {
   packageType    String?
   expectedAt     DateTime?
   receivedAt     DateTime?
+  handoverPin    String?
+  handoverVerifiedAt DateTime?
   status         DeliveryStatus @default(EXPECTED)
   createdById    Int
   receivedById   Int?
@@ -237,6 +256,7 @@ model EmergencyAlert {
   raisedBy         User        @relation("AlertRaisedBy", fields: [raisedById], references: [id])
   acknowledgedBy   User?       @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
   flat             Flat?       @relation(fields: [flatId], references: [id])
+  tasks            IncidentTask[]
   createdAt        DateTime    @default(now())
 
   @@index([status, level])
@@ -256,6 +276,7 @@ model MaintenanceInvoice {
   flat         Flat              @relation(fields: [flatId], references: [id])
   createdBy    User              @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
   payments     MaintenancePayment[]
+  reminders    PaymentReminder[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -465,5 +486,51 @@ model ParkingAllocation {
   markedBy    User        @relation("ParkingMarkedBy", fields: [markedById], references: [id])
 
   @@index([slotId])
+}
+
+// ─── Advanced Risk & Reminder Modules ───────────────────────────────────────
+
+model WatchlistEntry {
+  id          Int           @id @default(autoincrement())
+  type        WatchlistType
+  value       String
+  reason      String
+  severity    String        @default("HIGH")
+  isActive    Boolean       @default(true)
+  createdById Int
+  createdBy   User          @relation("WatchlistCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime      @default(now())
+
+  @@index([type, value])
+  @@index([isActive])
+}
+
+model PaymentReminder {
+  id         Int             @id @default(autoincrement())
+  invoiceId  Int
+  sentById   Int
+  channel    ReminderChannel
+  message    String
+  invoice    MaintenanceInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sentBy     User            @relation("ReminderSentBy", fields: [sentById], references: [id])
+  createdAt  DateTime        @default(now())
+
+  @@index([invoiceId])
+}
+
+model IncidentTask {
+  id           Int       @id @default(autoincrement())
+  alertId       Int
+  assignedToId  Int
+  createdById   Int
+  note          String
+  status        String    @default("ASSIGNED")
+  alert         EmergencyAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  assignedTo    User      @relation("IncidentAssignedTo", fields: [assignedToId], references: [id])
+  createdBy     User      @relation("IncidentCreatedBy", fields: [createdById], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([alertId, status])
 }
 

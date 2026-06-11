@@ -161,6 +161,17 @@ export const allocateParkingSlot = catchAsync(async (req, res, next) => {
   const slotId = Number(req.params.id);
   const { vehicleNo, purpose, flatId } = req.body;
 
+  const blockedVehicle = await prisma.watchlistEntry.findFirst({
+    where: {
+      isActive: true,
+      type: "VEHICLE_NUMBER",
+      value: vehicleNo,
+    },
+  });
+  if (blockedVehicle) {
+    return next(new ApiError(403, `Vehicle is watchlisted: ${blockedVehicle.reason}`));
+  }
+
   const slot = await prisma.parkingSlot.findUnique({ where: { id: slotId } });
   if (!slot || !slot.isActive) return next(new ApiError(404, "Parking slot not found"));
 

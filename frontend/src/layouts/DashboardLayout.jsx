@@ -41,7 +41,7 @@ function DashboardLayout() {
           <p className="text-sm text-paper/80">Logged in as {user?.name} ({user?.role})</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
           {links.map((item) => (
             <Link key={item.to} to={item.to} className="rounded-lg bg-paper/10 px-3 py-2 text-sm hover:bg-paper/20">
               {item.label}

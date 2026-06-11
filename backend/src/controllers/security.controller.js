@@ -12,6 +12,46 @@ export const createVisitorEntry = catchAsync(async (req, res) => {
     purpose,
   } = req.body;
 
+  const watchlistHits = await prisma.watchlistEntry.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        phone ? { type: "VISITOR_PHONE", value: phone } : undefined,
+        vehicleNumber ? { type: "VEHICLE_NUMBER", value: vehicleNumber } : undefined,
+        { type: "PERSON_NAME", value: visitorName },
+      ].filter(Boolean),
+    },
+  });
+
+  if (watchlistHits.length > 0) {
+    const visitor = await prisma.visitor.create({
+      data: {
+        name: visitorName,
+        phone,
+        vehicleNumber,
+      },
+    });
+
+    const log = await prisma.visitorLog.create({
+      data: {
+        visitorId: visitor.id,
+        flatId,
+        enteredBy: req.user.id,
+        peopleCount,
+        purpose,
+        status: "REJECTED",
+        exitTime: new Date(),
+      },
+      include: { visitor: true, flat: true },
+    });
+
+    return res.status(403).json({
+      message: "Entry blocked: visitor matched watchlist",
+      watchlistHits,
+      log,
+    });
+  }
+
   const visitor = await prisma.visitor.create({
     data: {
       name: visitorName,

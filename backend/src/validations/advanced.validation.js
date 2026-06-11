@@ -187,3 +187,40 @@ export const listAuditLogsSchema = z.object({
     limit: z.string().regex(/^\d+$/).optional(),
   }).default({}),
 });
+
+export const generateDeliveryPinSchema = z.object({
+  body: z.object({}).default({}),
+  params: idParam,
+  query: z.object({}).default({}),
+});
+
+export const verifyDeliveryPinSchema = z.object({
+  body: z.object({
+    pin: z.string().regex(/^\d{4}$/),
+  }),
+  params: idParam,
+  query: z.object({}).default({}),
+});
+
+export const createIncidentTaskSchema = z.object({
+  body: z.object({
+    assignedToId: z.number().int().positive(),
+    note: z.string().min(3).max(300),
+  }),
+  params: idParam,
+  query: z.object({}).default({}),
+});
+
+export const updateIncidentTaskSchema = z.object({
+  body: z.object({
+    status: z.enum(["ASSIGNED", "IN_PROGRESS", "RESOLVED"]).optional(),
+    note: z.string().min(3).max(300).optional(),
+  }).refine((v) => v.status || v.note, {
+    message: "Either status or note is required",
+  }),
+  params: z.object({
+    id: z.string().regex(/^\d+$/),
+    taskId: z.string().regex(/^\d+$/),
+  }),
+  query: z.object({}).default({}),
+});

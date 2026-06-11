@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import api from "../../api/client";
+import { useAuth } from "../../contexts/AuthContext";
 
 const deliveryInitial = {
   flatId: "",
@@ -17,23 +18,27 @@ const alertInitial = {
 };
 
 function SecurityOperationsPage() {
+  const { user } = useAuth();
   const [dashboard, setDashboard] = useState(null);
   const [flats, setFlats] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [watchlist, setWatchlist] = useState([]);
+  const [incidentTasks, setIncidentTasks] = useState({});
   const [deliveryForm, setDeliveryForm] = useState(deliveryInitial);
   const [alertForm, setAlertForm] = useState(alertInitial);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const fetchData = async () => {
-    const [dashboardRes, flatsRes, deliveriesRes, vehiclesRes, alertsRes] = await Promise.all([
+    const [dashboardRes, flatsRes, deliveriesRes, vehiclesRes, alertsRes, watchlistRes] = await Promise.all([
       api.get("/advanced/security/dashboard"),
       api.get("/security/flats"),
       api.get("/advanced/deliveries"),
       api.get("/advanced/vehicles"),
       api.get("/advanced/emergency-alerts"),
+      api.get("/modules/watchlist", { params: { isActive: true } }),
     ]);
 
     setDashboard(dashboardRes.data);
@@ -41,6 +46,21 @@ function SecurityOperationsPage() {
     setDeliveries(deliveriesRes.data);
     setVehicles(vehiclesRes.data);
     setAlerts(alertsRes.data);
+    setWatchlist(watchlistRes.data);
+
+    const openAlertIds = alertsRes.data
+      .filter((a) => ["OPEN", "ACKNOWLEDGED"].includes(a.status))
+      .map((a) => a.id)
+      .slice(0, 8);
+
+    const tasksPairs = await Promise.all(
+      openAlertIds.map(async (id) => {
+        const { data } = await api.get(`/advanced/emergency-alerts/${id}/tasks`);
+        return [id, data];
+      })
+    );
+
+    setIncidentTasks(Object.fromEntries(tasksPairs));
   };
 
   useEffect(() => {
@@ -91,6 +111,19 @@ function SecurityOperationsPage() {
     }
   };
 
+  const generatePin = async (id) => {
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      const { data } = await api.post(`/advanced/deliveries/${id}/pin`);
+      setStatusMessage(`Handover PIN for delivery #${id}: ${data.handoverPin}`);
+      await fetchData();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || "Unable to generate handover pin.");
+    }
+  };
+
   const updateVehicle = async (id, status) => {
     setStatusMessage("");
     setErrorMessage("");
@@ -133,6 +166,37 @@ function SecurityOperationsPage() {
       await fetchData();
     } catch (err) {
       setErrorMessage(err.response?.data?.message || "Unable to update alert.");
+    }
+  };
+
+  const assignTask = async (alertId) => {
+    if (!user?.id) {
+      setErrorMessage("Unable to identify current guard user.");
+      return;
+    }
+
+    const note = window.prompt("Task note for this incident");
+    if (!note) return;
+
+    try {
+      await api.post(`/advanced/emergency-alerts/${alertId}/tasks`, {
+        assignedToId: user?.id,
+        note,
+      });
+      setStatusMessage("Incident task created.");
+      await fetchData();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || "Unable to create incident task.");
+    }
+  };
+
+  const updateTask = async (alertId, taskId, status) => {
+    try {
+      await api.patch(`/advanced/emergency-alerts/${alertId}/tasks/${taskId}`, { status });
+      setStatusMessage("Incident task updated.");
+      await fetchData();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || "Unable to update incident task.");
     }
   };
 
@@ -187,6 +251,7 @@ function SecurityOperationsPage() {
                 <p className="text-xs text-ink/70">{item.flat?.block}-{item.flat?.flatNumber}</p>
                 <div className="mt-2 flex gap-2">
                   <button type="button" className="rounded-lg border border-ink/20 px-3 py-1 text-xs" onClick={() => updateDelivery(item.id, "ARRIVED")}>Arrived</button>
+                  <button type="button" className="rounded-lg border border-ink/20 px-3 py-1 text-xs" onClick={() => generatePin(item.id)}>Generate PIN</button>
                   <button type="button" className="rounded-lg bg-tide px-3 py-1 text-xs text-paper" onClick={() => updateDelivery(item.id, "COLLECTED")}>Collected</button>
                 </div>
               </div>
@@ -242,6 +307,57 @@ function SecurityOperationsPage() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <article className="panel">
+          <h3 className="mb-3 text-lg font-semibold">Incident Command Tasks</h3>
+          <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+            {alerts
+              .filter((item) => ["OPEN", "ACKNOWLEDGED"].includes(item.status))
+              .slice(0, 8)
+              .map((item) => (
+                <div key={item.id} className="rounded-xl border border-ink/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">Alert #{item.id} | {item.level}</p>
+                      <p className="text-xs text-ink/70">{item.message}</p>
+                    </div>
+                    <button type="button" className="rounded-lg border border-ink/20 px-3 py-1 text-xs" onClick={() => assignTask(item.id)}>
+                      + Task
+                    </button>
+                  </div>
+
+                  <div className="mt-2 space-y-2">
+                    {(incidentTasks[item.id] || []).map((task) => (
+                      <div key={task.id} className="rounded-lg bg-ink/5 p-2 text-xs">
+                        <p className="font-medium">{task.note}</p>
+                        <p className="text-ink/60">{task.status} | assigned to {task.assignedTo?.name}</p>
+                        <div className="mt-1 flex gap-2">
+                          <button type="button" className="rounded border border-ink/20 px-2 py-0.5" onClick={() => updateTask(item.id, task.id, "IN_PROGRESS")}>In Progress</button>
+                          <button type="button" className="rounded border border-ink/20 px-2 py-0.5" onClick={() => updateTask(item.id, task.id, "RESOLVED")}>Done</button>
+                        </div>
+                      </div>
+                    ))}
+                    {(incidentTasks[item.id] || []).length === 0 && <p className="text-xs text-ink/60">No tasks yet.</p>}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </article>
+
+        <article className="panel">
+          <h3 className="mb-3 text-lg font-semibold">Live Watchlist (Gate Intel)</h3>
+          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+            {watchlist.slice(0, 20).map((w) => (
+              <div key={w.id} className="rounded-xl border border-ink/10 p-3 text-sm">
+                <p className="font-semibold">{w.type} | {w.value}</p>
+                <p className="text-xs text-ink/60">{w.severity} | {w.reason}</p>
+              </div>
+            ))}
+            {watchlist.length === 0 && <p className="text-sm text-ink/60">No active watchlist entries.</p>}
+          </div>
+        </article>
       </section>
     </div>
   );

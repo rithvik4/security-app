@@ -195,6 +195,20 @@ export const verifyInviteOtp = catchAsync(async (req, res, next) => {
 
   if (!invite) return next(new ApiError(404, "Invalid or expired OTP"));
 
+  const watchlistHits = await prisma.watchlistEntry.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        invite.guestPhone ? { type: "VISITOR_PHONE", value: invite.guestPhone } : undefined,
+        { type: "PERSON_NAME", value: invite.guestName },
+      ].filter(Boolean),
+    },
+  });
+
+  if (watchlistHits.length > 0) {
+    return next(new ApiError(403, "Invite verification blocked: guest is watchlisted"));
+  }
+
   // Mark invite as used and auto-create visitor entry
   const [updatedInvite, visitorLog] = await prisma.$transaction(async (tx) => {
     const updated = await tx.visitorInvite.update({

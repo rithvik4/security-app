@@ -80,9 +80,14 @@ function MemberCommunityPage() {
     setStatusMessage("");
     setErrorMessage("");
 
+    const pin = window.prompt("Enter 4-digit handover PIN from security gate");
+    if (!pin) {
+      return;
+    }
+
     try {
-      await api.patch(`/advanced/deliveries/${id}/status`, { status: "COLLECTED" });
-      setStatusMessage("Delivery marked as collected.");
+      await api.post(`/advanced/deliveries/${id}/handover-verify`, { pin });
+      setStatusMessage("Delivery handover verified and marked collected.");
       await fetchData();
     } catch (err) {
       setErrorMessage(err.response?.data?.message || "Unable to update delivery.");

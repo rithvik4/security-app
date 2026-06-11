@@ -175,3 +175,41 @@ export const listAllocationsSchema = z.object({
   params: z.object({}).default({}),
   query: z.object({ active: z.string().optional() }).default({}),
 });
+
+export const createWatchlistSchema = z.object({
+  body: z.object({
+    type: z.enum(["VISITOR_PHONE", "VEHICLE_NUMBER", "PERSON_NAME"]),
+    value: z.string().min(2).max(80),
+    reason: z.string().min(3).max(300),
+    severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+  }),
+  ...base,
+});
+
+export const listWatchlistSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({}).default({}),
+  query: z.object({
+    type: z.enum(["VISITOR_PHONE", "VEHICLE_NUMBER", "PERSON_NAME"]).optional(),
+    isActive: z.string().optional(),
+    q: z.string().optional(),
+  }).default({}),
+});
+
+export const updateWatchlistSchema = z.object({
+  body: z.object({
+    reason: z.string().min(3).max(300).optional(),
+    severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+    isActive: z.boolean().optional(),
+  }),
+  params: idParam,
+  query: z.object({}).default({}),
+});
+
+export const runRemindersSchema = z.object({
+  body: z.object({
+    channel: z.enum(["PUSH", "SMS", "EMAIL", "WHATSAPP"]).optional(),
+  }).default({}),
+  params: z.object({}).default({}),
+  query: z.object({}).default({}),
+});

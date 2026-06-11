@@ -12,6 +12,13 @@ import {
   verifyInviteOtp,
 } from "../controllers/staff.controller.js";
 import {
+  createWatchlistEntry,
+  listMaintenanceReminders,
+  listWatchlistEntries,
+  runMaintenanceReminders,
+  updateWatchlistEntry,
+} from "../controllers/nextgen.controller.js";
+import {
   createAmenity,
   createBooking,
   listAmenities,
@@ -42,15 +49,19 @@ import {
   createInviteSchema,
   createParkingSlotSchema,
   createPollSchema,
+  createWatchlistSchema,
   listAllocationsSchema,
   listAttendanceSchema,
   listBookingsSchema,
   listFrequentVisitorsSchema,
   listParkingSlotsSchema,
+  listWatchlistSchema,
+  runRemindersSchema,
   staffCheckInSchema,
   updateAmenitySchema,
   updateBookingStatusSchema,
   updateFrequentVisitorSchema,
+  updateWatchlistSchema,
   verifyOtpSchema,
   voteSchema,
 } from "../validations/modules.validation.js";
@@ -63,11 +74,20 @@ router.use(authenticate);
 
 // Readiness guard for new module delegates
 router.use((_req, _res, next) => {
-  if (!prisma.frequentVisitor || !prisma.parkingSlot || !prisma.societyPoll || !prisma.amenity) {
+  if (!prisma.frequentVisitor || !prisma.parkingSlot || !prisma.societyPoll || !prisma.amenity || !prisma.watchlistEntry) {
     return next(new ApiError(503, "New modules not ready. Run prisma migrate/generate and restart backend."));
   }
   return next();
 });
+
+// ─── Watchlist & Risk Control ────────────────────────────────────────────────
+router.post("/watchlist", authorize("ADMIN", "SECURITY"), validate(createWatchlistSchema), createWatchlistEntry);
+router.get("/watchlist", authorize("ADMIN", "SECURITY"), validate(listWatchlistSchema), listWatchlistEntries);
+router.patch("/watchlist/:id", authorize("ADMIN", "SECURITY"), validate(updateWatchlistSchema), updateWatchlistEntry);
+
+// ─── Maintenance Reminder Engine ─────────────────────────────────────────────
+router.post("/maintenance/reminders/run", authorize("ADMIN"), validate(runRemindersSchema), runMaintenanceReminders);
+router.get("/maintenance/reminders", authorize("ADMIN", "MEMBER"), listMaintenanceReminders);
 
 // ─── Frequent Visitors + Attendance ──────────────────────────────────────────
 router.post("/staff", authorize("MEMBER"), validate(addFrequentVisitorSchema), addFrequentVisitor);

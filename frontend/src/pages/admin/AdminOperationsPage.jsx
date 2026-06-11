@@ -11,6 +11,12 @@ const initialInvoice = {
   year: "",
   notes: "",
 };
+const initialWatchlist = {
+  type: "VEHICLE_NUMBER",
+  value: "",
+  reason: "",
+  severity: "HIGH",
+};
 
 function AdminOperationsPage() {
   const [analytics, setAnalytics] = useState(null);
@@ -18,9 +24,12 @@ function AdminOperationsPage() {
   const [announcements, setAnnouncements] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [watchlist, setWatchlist] = useState([]);
+  const [reminders, setReminders] = useState([]);
   const [flats, setFlats] = useState([]);
   const [announcementForm, setAnnouncementForm] = useState(initialAnnouncement);
   const [invoiceForm, setInvoiceForm] = useState(initialInvoice);
+  const [watchlistForm, setWatchlistForm] = useState(initialWatchlist);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -31,6 +40,8 @@ function AdminOperationsPage() {
       announcementsRes,
       complaintsRes,
       invoicesRes,
+      watchlistRes,
+      remindersRes,
       flatsRes,
     ] = await Promise.all([
       api.get("/advanced/analytics/overview"),
@@ -38,6 +49,8 @@ function AdminOperationsPage() {
       api.get("/advanced/announcements"),
       api.get("/advanced/complaints"),
       api.get("/advanced/maintenance-invoices"),
+      api.get("/modules/watchlist"),
+      api.get("/modules/maintenance/reminders"),
       api.get("/admin/flats"),
     ]);
 
@@ -46,6 +59,8 @@ function AdminOperationsPage() {
     setAnnouncements(announcementsRes.data);
     setComplaints(complaintsRes.data);
     setInvoices(invoicesRes.data);
+    setWatchlist(watchlistRes.data);
+    setReminders(remindersRes.data);
     setFlats(flatsRes.data);
   };
 
@@ -66,6 +81,10 @@ function AdminOperationsPage() {
 
   const onInvoiceChange = (e) => {
     setInvoiceForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const onWatchlistChange = (e) => {
+    setWatchlistForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const publishAnnouncement = async (e) => {
@@ -119,6 +138,47 @@ function AdminOperationsPage() {
       await fetchData();
     } catch (err) {
       setErrorMessage(err.response?.data?.message || "Unable to update complaint.");
+    }
+  };
+
+  const addWatchlist = async (e) => {
+    e.preventDefault();
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      await api.post("/modules/watchlist", watchlistForm);
+      setWatchlistForm(initialWatchlist);
+      setStatusMessage("Watchlist entry created.");
+      await fetchData();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || "Unable to create watchlist entry.");
+    }
+  };
+
+  const toggleWatchlist = async (entry) => {
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      await api.patch(`/modules/watchlist/${entry.id}`, { isActive: !entry.isActive });
+      setStatusMessage(entry.isActive ? "Watchlist entry disabled." : "Watchlist entry activated.");
+      await fetchData();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || "Unable to update watchlist entry.");
+    }
+  };
+
+  const runReminders = async (channel) => {
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      const { data } = await api.post("/modules/maintenance/reminders/run", { channel });
+      setStatusMessage(`Reminder engine sent ${data.sent} reminder(s) via ${channel}.`);
+      await fetchData();
+    } catch (err) {
+      setErrorMessage(err.response?.data?.message || "Unable to run reminders.");
     }
   };
 
@@ -257,6 +317,69 @@ function AdminOperationsPage() {
                   {log.entityType} {log.entityId ? `#${log.entityId}` : ""} | {log.actor?.name || "System"}
                 </p>
                 <p className="text-xs text-ink/60">{new Date(log.createdAt).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+        <article className="panel">
+          <h3 className="mb-3 text-lg font-semibold">AI Watchlist and Risk Control</h3>
+          <form className="grid gap-3" onSubmit={addWatchlist}>
+            <select className="input" name="type" value={watchlistForm.type} onChange={onWatchlistChange}>
+              <option value="VEHICLE_NUMBER">Vehicle Number</option>
+              <option value="VISITOR_PHONE">Visitor Phone</option>
+              <option value="PERSON_NAME">Person Name</option>
+            </select>
+            <input className="input" name="value" placeholder="Value to block/watch" value={watchlistForm.value} onChange={onWatchlistChange} required />
+            <input className="input" name="reason" placeholder="Reason" value={watchlistForm.reason} onChange={onWatchlistChange} required />
+            <select className="input" name="severity" value={watchlistForm.severity} onChange={onWatchlistChange}>
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+              <option value="CRITICAL">CRITICAL</option>
+            </select>
+            <button type="submit" className="button-primary w-full">Add Watchlist Entry</button>
+          </form>
+
+          <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
+            {watchlist.slice(0, 12).map((entry) => (
+              <div key={entry.id} className="rounded-xl border border-ink/10 p-3 text-sm">
+                <p className="font-semibold">{entry.type} | {entry.value}</p>
+                <p className="text-xs text-ink/60">{entry.severity} | {entry.reason}</p>
+                <button type="button" className="mt-2 rounded-lg border border-ink/20 px-3 py-1 text-xs" onClick={() => toggleWatchlist(entry)}>
+                  {entry.isActive ? "Disable" : "Activate"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel">
+          <h3 className="mb-3 text-lg font-semibold">Maintenance Reminder Engine</h3>
+          <p className="mb-3 text-sm text-ink/70">
+            Trigger automated due-payment reminders for upcoming maintenance dues.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {["PUSH", "SMS", "EMAIL", "WHATSAPP"].map((channel) => (
+              <button
+                key={channel}
+                type="button"
+                className="rounded-lg border border-ink/20 px-3 py-1 text-xs"
+                onClick={() => runReminders(channel)}
+              >
+                Run {channel}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-4 max-h-56 space-y-2 overflow-y-auto pr-1">
+            {reminders.slice(0, 15).map((item) => (
+              <div key={item.id} className="rounded-xl border border-ink/10 p-3 text-sm">
+                <p className="font-semibold">{item.channel} | {item.invoice?.flat?.block}-{item.invoice?.flat?.flatNumber}</p>
+                <p className="text-xs text-ink/60">{item.message}</p>
+                <p className="text-xs text-ink/50">{new Date(item.createdAt).toLocaleString()}</p>
               </div>
             ))}
           </div>

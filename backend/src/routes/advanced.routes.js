@@ -24,6 +24,13 @@ import {
   updateVehicleStatus,
   verifyResidentIdentity,
 } from "../controllers/advanced.controller.js";
+import {
+  createIncidentTask,
+  generateDeliveryPin,
+  listIncidentTasks,
+  updateIncidentTask,
+  verifyDeliveryPin,
+} from "../controllers/nextgen.controller.js";
 import { prisma } from "../config/prisma.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
@@ -36,6 +43,8 @@ import {
   createDeliverySchema,
   createEmergencyAlertSchema,
   createMaintenanceInvoiceSchema,
+  createIncidentTaskSchema,
+  generateDeliveryPinSchema,
   listAuditLogsSchema,
   listComplaintsSchema,
   listDeliveriesSchema,
@@ -46,8 +55,10 @@ import {
   registerVehicleSchema,
   residentDirectorySchema,
   updateComplaintStatusSchema,
+  updateIncidentTaskSchema,
   updateDeliveryStatusSchema,
   updateVehicleStatusSchema,
+  verifyDeliveryPinSchema,
   verifyResidentSchema,
 } from "../validations/advanced.validation.js";
 
@@ -84,6 +95,18 @@ router.patch(
   validate(updateDeliveryStatusSchema),
   updateDeliveryStatus
 );
+router.post(
+  "/deliveries/:id/pin",
+  authorize("ADMIN", "SECURITY"),
+  validate(generateDeliveryPinSchema),
+  generateDeliveryPin
+);
+router.post(
+  "/deliveries/:id/handover-verify",
+  authorize("ADMIN", "MEMBER"),
+  validate(verifyDeliveryPinSchema),
+  verifyDeliveryPin
+);
 
 router.post("/vehicles", authorize("MEMBER"), validate(registerVehicleSchema), registerVehicle);
 router.get("/vehicles", authorize("ADMIN", "SECURITY", "MEMBER"), validate(listVehiclesSchema), listVehicles);
@@ -111,6 +134,23 @@ router.patch(
   authorize("ADMIN", "SECURITY"),
   validate(acknowledgeEmergencyAlertSchema),
   acknowledgeEmergencyAlert
+);
+router.post(
+  "/emergency-alerts/:id/tasks",
+  authorize("ADMIN", "SECURITY"),
+  validate(createIncidentTaskSchema),
+  createIncidentTask
+);
+router.get(
+  "/emergency-alerts/:id/tasks",
+  authorize("ADMIN", "SECURITY", "MEMBER"),
+  listIncidentTasks
+);
+router.patch(
+  "/emergency-alerts/:id/tasks/:taskId",
+  authorize("ADMIN", "SECURITY"),
+  validate(updateIncidentTaskSchema),
+  updateIncidentTask
 );
 
 router.post(
