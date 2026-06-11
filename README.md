@@ -1,190 +1,92 @@
-# Society Security Management System
 
-Full-stack secure web app for residential society visitor and gate operations.
+# Security App
 
-## Tech Stack
+A modern security management application designed to streamline monitoring, incident reporting, visitor management, and access control for residential societies or organizations.
 
-- Frontend: React + Vite + Tailwind CSS
-- Backend: Node.js + Express
-- Database: PostgreSQL + Prisma ORM
-- Authentication: JWT access/refresh tokens + RBAC
+## Features
 
-## Roles
-
-- Admin
-- Security
-- Member
-
-## Project Structure
-
-```text
-secuirty/
-  backend/
-    prisma/
-      schema.prisma
-      seed.js
-    src/
-      config/
-      controllers/
-      middlewares/
-      routes/
-      services/
-      validations/
-      app.js
-      server.js
-    .env.example
-    package.json
-  frontend/
-# Society Security Management System
-
-Full-stack secure web app for residential society visitor and gate operations.
+- 🔐 User authentication and authorization
+- 🏢 Society and resident management
+- 👮 Security guard dashboard
+- 📋 Visitor entry and exit tracking
+- 🚨 Incident reporting
+- 📱 Responsive user interface
+- 📊 Activity logs and monitoring
 
 ## Tech Stack
 
-- Frontend: React + Vite + Tailwind CSS
-- Backend: Node.js + Express
-- Database: PostgreSQL + Prisma ORM
-- Authentication: JWT access/refresh tokens + RBAC
-
-## Roles
-
-- Admin
-- Security
-- Member
+- Frontend: HTML, CSS, JavaScript / React (update as applicable)
+- Backend: Node.js / Express (update as applicable)
+- Database: MongoDB / MySQL (update as applicable)
+- Authentication: JWT / OAuth (if used)
 
 ## Project Structure
 
-```text
-secuirty/
-  backend/
-    prisma/
-      schema.prisma
-      seed.js
-    src/
-      config/
-      controllers/
-      middlewares/
-      routes/
-      services/
-      validations/
-      app.js
-      server.js
-    .env.example
-    package.json
-  frontend/
-    src/
-      api/
-      contexts/
-      layouts/
-      pages/
-        admin/
-        security/
-        member/
-      routes/
-      App.jsx
-      main.jsx
-      index.css
-    .env.example
-    package.json
-  docker-compose.yml
-  README.md
+```
+security-app/
+├── src/
+├── public/
+├── components/
+├── assets/
+├── package.json
+└── README.md
 ```
 
-## Setup Steps
+## Installation
 
-1. Start PostgreSQL:
-```bash
-docker compose up -d
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/rithvik4/security-app.git
+   ```
+
+2. Navigate to the project directory:
+   ```bash
+   cd security-app
+   ```
+
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+4. Start the development server:
+   ```bash
+   npm start
+   ```
+
+## Configuration
+
+Create a `.env` file and configure the required environment variables:
+
+```env
+PORT=3000
+DATABASE_URL=your_database_url
+JWT_SECRET=your_secret_key
 ```
 
-2. Backend setup:
-```bash
-cd backend
-npm install
-copy .env.example .env
-npm run prisma:generate
-npx prisma migrate dev --name init
-npm run prisma:seed
-npm run dev
-```
+## Usage
 
-3. Frontend setup:
-```bash
-cd frontend
-npm install
-copy .env.example .env
-npm run dev
-```
+- Log in to the application.
+- Manage visitors and residents.
+- Monitor security activities.
+- Generate reports and track incidents.
 
-4. Open:
-- Frontend: http://localhost:5173
-- Backend health: http://localhost:5000/api/health
+## Future Enhancements
 
-## Seed Credentials
+- Face recognition integration
+- QR-based visitor passes
+- Push notifications
+- Mobile application support
+- AI-powered anomaly detection
 
-- admin@society.local / Pass@123
-- guard@society.local / Pass@123
-- member@society.local / Pass@123
+## Contributing
 
-## Core API Endpoints
+Contributions are welcome. Feel free to fork the repository, create a feature branch, and submit a pull request.
 
-### Auth
-- POST /api/auth/login
-- POST /api/auth/refresh
-- POST /api/auth/logout
-- GET /api/auth/me
+## License
 
-### Admin
-- GET /api/admin/dashboard/summary
-- POST /api/admin/flats
-- GET /api/admin/flats
-- PATCH /api/admin/flats/:id
-- DELETE /api/admin/flats/:id
-- POST /api/admin/members
-- GET /api/admin/members
-- PATCH /api/admin/members/:id
-- DELETE /api/admin/members/:id
-- POST /api/admin/security
-- GET /api/admin/security
-- PATCH /api/admin/security/:id
-- DELETE /api/admin/security/:id
-- GET /api/admin/visitor-logs?dateFrom=&dateTo=&block=&flatNumber=&status=
+This project is licensed under the MIT License.
 
-### Security
-- POST /api/security/visitor-entry
-- GET /api/security/active-entries
-- PATCH /api/security/visitor-exit/:logId
+## Author
 
-### Member
-- GET /api/member/visitors
-- PATCH /api/member/visitors/:logId/decision
-
-## Security Measures Included
-
-- bcrypt password hashing
-- JWT access + refresh token flow
-- Refresh token persistence and revocation
-- Role-based authorization middleware
-- Zod input validation
-- Helmet headers
-- Express rate limiting
-- CORS origin allowlist
-- Basic request sanitization
-- Centralized error handling
-
-## Optional Extensions
-
-### Real-Time Updates (Socket.io)
-
-1. Add Socket.io server in backend and authenticate socket connections using JWT.
-2. Emit `visitor:created`, `visitor:exited`, and `visitor:rejected` events.
-3. Subscribe in frontend role dashboards for live card/table updates.
-
-### PWA Conversion
-
-1. Add `vite-plugin-pwa` to frontend.
-2. Configure manifest with app name/icons.
-3. Enable runtime caching for API and static assets.
-4. Add offline fallback screens for role dashboards.
-5. Use install prompt banner for mobile home-screen experience.
->>>>>>> 2e83dab (Initial commit: add all project files)
+**Rithvik Kumar**
